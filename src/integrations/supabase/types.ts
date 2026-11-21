@@ -14,16 +14,118 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      date_requests: {
+        Row: {
+          activity: string
+          additional_request: string | null
+          created_at: string
+          custom_activity: string | null
+          destination: string
+          email_claimed_at: string | null
+          email_status: string
+          id: string
+          requested_date: string
+          requested_time: string
+          submitted_by: string
+          time_category: string
+        }
+        Insert: {
+          activity: string
+          additional_request?: string | null
+          created_at?: string
+          custom_activity?: string | null
+          destination: string
+          email_claimed_at?: string | null
+          email_status?: string
+          id: string
+          requested_date: string
+          requested_time: string
+          submitted_by: string
+          time_category: string
+        }
+        Update: {
+          activity?: string
+          additional_request?: string | null
+          created_at?: string
+          custom_activity?: string | null
+          destination?: string
+          email_claimed_at?: string | null
+          email_status?: string
+          id?: string
+          requested_date?: string
+          requested_time?: string
+          submitted_by?: string
+          time_category?: string
+        }
+        Relationships: []
+      }
+      media: {
+        Row: {
+          caption: string | null
+          created_at: string
+          created_by: string
+          file_size: number
+          id: string
+          media_type: string
+          original_filename: string
+          storage_path: string
+          thumbnail_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          created_by: string
+          file_size: number
+          id?: string
+          media_type: string
+          original_filename: string
+          storage_path: string
+          thumbnail_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string
+          file_size?: number
+          id?: string
+          media_type?: string
+          original_filename?: string
+          storage_path?: string
+          thumbnail_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          role: Database["public"]["Enums"]["couple_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role: Database["public"]["Enums"]["couple_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: Database["public"]["Enums"]["couple_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_couple_member: { Args: never; Returns: boolean }
+      is_partner: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      couple_role: "owner" | "partner"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +252,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      couple_role: ["owner", "partner"],
+    },
   },
 } as const

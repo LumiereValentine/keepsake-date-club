@@ -28,3 +28,11 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Application architecture
+- Keep public login and recovery routes separate from the client-only authenticated layout; private pages load role membership before their data so only manually provisioned couple members can enter.
+- Store roles exclusively in a protected role table with one unique slot per role; gallery and storage policies verify membership and date submissions verify the partner role.
+- Use TanStack server functions with generated bearer middleware for protected business logic, not new Edge Functions; this matches the supported deployed Worker runtime.
+- Preserve original media in private type-limited buckets and generate browser canvas thumbnails separately; only signed URLs or authenticated downloads expose file contents.
+- Keep customizable editorial content separate from pages and express all visual roles in the global design system; dates and validation share a browser-safe rules module and concrete tests.
+- Use persisted request IDs and Resend idempotency keys for notification retries; the recipient is resolved server-side from the manually provisioned owner account, never public configuration.
