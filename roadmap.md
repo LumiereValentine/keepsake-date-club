@@ -1,4 +1,5 @@
 # Anniversary website
+- [ ] Create a temporary test user and verify signed-in behavior
 - [ ] Editorial login, secure membership and password recovery
 - [ ] Protected home, anniversary clocks and three-item navigation
 - [ ] Private shared gallery: upload, captions, thumbnails, viewer, download and deletion
