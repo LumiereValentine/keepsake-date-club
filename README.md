@@ -1,24 +1,13 @@
-# Keepsake Date Club
+# Always, Us — private anniversary website
 
-Implement exactly the screenshot and nothing else
+## Setup
+1. Create two accounts in the backend (Users), then give each one role in `user_roles`: one `owner`, one `partner`. Nobody else can enter.
+2. Connect Resend (connector) so date requests email the owner. Optionally set `RESEND_FROM` to an address on a verified Resend domain; the default test sender only delivers to the Resend account owner.
+3. Edit wording in `src/features/anniversary/content.ts`.
 
-This project was built with [Lovable](https://lovable.dev).
+## Rules
+- Anniversary: 24 March 2020, Asia/Jakarta time.
+- Date requests: tomorrow or later; Morning 08–11, Evening 16–18, Night 19–21.
+- Photos up to 20 MB, videos up to 100 MB.
 
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/226ad9f0-f927-4396-a2ec-765735907874).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+Run tests: `bunx vitest run`.
