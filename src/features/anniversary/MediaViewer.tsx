@@ -1,21 +1,241 @@
-import {useEffect,useState} from 'react';
-import {useQueryClient} from '@tanstack/react-query';
-import {X,Download,ChevronLeft,ChevronRight,LoaderCircle,Save,ImagePlus} from 'lucide-react';
-import {toast} from 'sonner';
-import {Button} from '@/components/ui/button';
-import {supabase} from '@/integrations/supabase/client';
-import {formatDate,validateMedia} from './rules';
-import type {listMedia} from './data.functions';
-export type Memory=Awaited<ReturnType<typeof listMedia>>[number];
-export function MediaViewer({items,id,onClose,editing=false}:{items:Memory[];id:string;onClose:()=>void;editing?:boolean}){
- const query=useQueryClient();const [current,setCurrent]=useState(id);const [url,setUrl]=useState('');const [caption,setCaption]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');const index=items.findIndex(m=>m.id===current);const item=items[index];
- useEffect(()=>{const prior=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=prior;};},[]);
- useEffect(()=>{if(!item)return;let active=true;setUrl('');setError('');setCaption(item.caption||'');void supabase.storage.from(item.media_type==='photo'?'photos':'videos').createSignedUrl(item.storage_path,3600).then(({data,error})=>{if(!active)return;if(error)setError(error.message);else setUrl(data.signedUrl);});return()=>{active=false;};},[item]);
- function move(direction:number){const next=items[(index+direction+items.length)%items.length];if(next)setCurrent(next.id);}
- useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)return;if(e.key==='Escape')onClose();if(e.key==='ArrowLeft')move(-1);if(e.key==='ArrowRight')move(1);};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);});
- async function download(){if(!item)return;setBusy(true);try{const {data,error}=await supabase.storage.from(item.media_type==='photo'?'photos':'videos').download(item.storage_path);if(error)throw error;const blob=URL.createObjectURL(data);const a=document.createElement('a');a.href=blob;a.download=item.original_filename;a.click();setTimeout(()=>URL.revokeObjectURL(blob),1000);}catch(e){toast.error(e instanceof Error?e.message:'Download failed.');}finally{setBusy(false);}}
- async function save(){if(!item)return;setBusy(true);const {error}=await supabase.from('media').update({caption:caption.trim()||null}).eq('id',item.id);if(error)toast.error(error.message);else{await query.invalidateQueries({queryKey:['media']});toast.success('Caption saved.');}setBusy(false);}
- async function thumbnail(file:File){if(!item)return;const validation=validateMedia(file);if(validation||!file.type.startsWith('image/')){toast.error(validation||'Choose a photo for the thumbnail.');return;}setBusy(true);const path=`${item.id}-${crypto.randomUUID()}.jpg`;try{const {makeThumbnail}=await import('./uploads');const blob=await makeThumbnail(file);const {error}=await supabase.storage.from('thumbnails').upload(path,blob,{contentType:'image/jpeg'});if(error)throw error;const {error:updateError}=await supabase.from('media').update({thumbnail_path:path}).eq('id',item.id);if(updateError){await supabase.storage.from('thumbnails').remove([path]);throw updateError;}if(item.thumbnail_path)await supabase.storage.from('thumbnails').remove([item.thumbnail_path]);await query.invalidateQueries({queryKey:['media']});toast.success('Video thumbnail updated.');}catch(e){toast.error(e instanceof Error?e.message:'Thumbnail could not be updated.');}finally{setBusy(false);}}
- if(!item)return null;
- return <div className="viewer" role="dialog" aria-modal="true" aria-label="Memory viewer"><div className="viewer-toolbar"><Button variant="ghost" size="icon" aria-label="Download original" title="Download original" disabled={busy} onClick={()=>void download()}>{busy?<LoaderCircle className="animate-spin"/>:<Download/>}</Button><Button variant="ghost" size="icon" aria-label="Close viewer" title="Close" onClick={onClose}><X/></Button></div>{error?<p role="alert">{error}</p>:!url?<LoaderCircle className="animate-spin"/>:item.media_type==='photo'?<img src={url} alt={item.caption||'Our memory'}/>:<video src={url} controls autoPlay={false} playsInline/>}{editing?<div className="w-full max-w-lg mt-4 flex flex-wrap gap-2"><input aria-label="Memory caption" maxLength={2000} value={caption} onChange={e=>setCaption(e.target.value)} placeholder="A few words to remember this moment…" className="flex-1 min-w-0 border border-border rounded-sm p-3 bg-background text-foreground"/><Button disabled={busy} onClick={()=>void save()}><Save/>Save</Button>{item.media_type==='video'&&<Button asChild variant="secondary"><label><ImagePlus/>Change thumbnail<input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={e=>{const file=e.target.files?.[0];if(file)void thumbnail(file);}}/></label></Button>}<small className="w-full opacity-70">Uploaded {formatDate(item.created_at)}</small></div>:item.caption?<div className="viewer-caption">{item.caption}<small>{formatDate(item.created_at)}</small></div>:null}{items.length>1&&<><Button variant="ghost" size="icon" className="viewer-arrow viewer-prev" aria-label="Previous memory" onClick={()=>move(-1)}><ChevronLeft/></Button><Button variant="ghost" size="icon" className="viewer-arrow viewer-next" aria-label="Next memory" onClick={()=>move(1)}><ChevronRight/></Button></>}</div>;
+import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  X,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+  Save,
+  ImagePlus,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { formatDate, validateMedia } from './rules';
+import type { listMedia } from './data.functions';
+export type Memory = Awaited<ReturnType<typeof listMedia>>[number];
+export function MediaViewer({
+  items,
+  id,
+  onClose,
+  editing = false,
+}: {
+  items: Memory[];
+  id: string;
+  onClose: () => void;
+  editing?: boolean;
+}) {
+  const query = useQueryClient();
+  const [current, setCurrent] = useState(id);
+  const [url, setUrl] = useState('');
+  const [caption, setCaption] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const index = items.findIndex((m) => m.id === current);
+  const item = items[index];
+  useEffect(() => {
+    const prior = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prior;
+    };
+  }, []);
+  useEffect(() => {
+    if (!item) return;
+    let active = true;
+    setUrl('');
+    setError('');
+    setCaption(item.caption || '');
+    void supabase.storage
+      .from(item.media_type === 'photo' ? 'photos' : 'videos')
+      .createSignedUrl(item.storage_path, 3600)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) setError(error.message);
+        else setUrl(data.signedUrl);
+      });
+    return () => {
+      active = false;
+    };
+  }, [item]);
+  function move(direction: number) {
+    const next = items[(index + direction + items.length) % items.length];
+    if (next) setCurrent(next.id);
+  }
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') move(-1);
+      if (e.key === 'ArrowRight') move(1);
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  });
+  async function download() {
+    if (!item) return;
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from(item.media_type === 'photo' ? 'photos' : 'videos')
+        .download(item.storage_path);
+      if (error) throw error;
+      const blob = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = blob;
+      a.download = item.original_filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(blob), 1000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Download failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function save() {
+    if (!item) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from('media')
+      .update({ caption: caption.trim() || null })
+      .eq('id', item.id);
+    if (error) toast.error(error.message);
+    else {
+      await query.invalidateQueries({ queryKey: ['media'] });
+      toast.success('Caption saved.');
+    }
+    setBusy(false);
+  }
+  async function thumbnail(file: File) {
+    if (!item) return;
+    const validation = validateMedia(file);
+    if (validation || !file.type.startsWith('image/')) {
+      toast.error(validation || 'Choose a photo for the thumbnail.');
+      return;
+    }
+    setBusy(true);
+    const path = `${item.id}-${crypto.randomUUID()}.jpg`;
+    try {
+      const { makeThumbnail } = await import('./uploads');
+      const blob = await makeThumbnail(file);
+      const { error } = await supabase.storage
+        .from('thumbnails')
+        .upload(path, blob, { contentType: 'image/jpeg' });
+      if (error) throw error;
+      const { error: updateError } = await supabase
+        .from('media')
+        .update({ thumbnail_path: path })
+        .eq('id', item.id);
+      if (updateError) {
+        await supabase.storage.from('thumbnails').remove([path]);
+        throw updateError;
+      }
+      if (item.thumbnail_path)
+        await supabase.storage.from('thumbnails').remove([item.thumbnail_path]);
+      await query.invalidateQueries({ queryKey: ['media'] });
+      toast.success('Video thumbnail updated.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Thumbnail could not be updated.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!item) return null;
+  return (
+    <div className="viewer" role="dialog" aria-modal="true" aria-label="Memory viewer">
+      <div className="viewer-toolbar">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Download original"
+          title="Download original"
+          disabled={busy}
+          onClick={() => void download()}
+        >
+          {busy ? <LoaderCircle className="animate-spin" /> : <Download />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Close viewer"
+          title="Close"
+          onClick={onClose}
+        >
+          <X />
+        </Button>
+      </div>
+      {error ? (
+        <p role="alert">{error}</p>
+      ) : !url ? (
+        <LoaderCircle className="animate-spin" />
+      ) : item.media_type === 'photo' ? (
+        <img src={url} alt={item.caption || 'Our memory'} />
+      ) : (
+        <video src={url} controls autoPlay={false} playsInline />
+      )}
+      {editing ? (
+        <div className="w-full max-w-lg mt-4 flex flex-wrap gap-2">
+          <input
+            aria-label="Memory caption"
+            maxLength={2000}
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="A few words to remember this moment…"
+            className="flex-1 min-w-0 border border-border rounded-sm p-3 bg-background text-foreground"
+          />
+          <Button disabled={busy} onClick={() => void save()}>
+            <Save />
+            Save
+          </Button>
+          {item.media_type === 'video' && (
+            <Button asChild variant="secondary">
+              <label>
+                <ImagePlus />
+                Change thumbnail
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={busy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void thumbnail(file);
+                  }}
+                />
+              </label>
+            </Button>
+          )}
+          <small className="w-full opacity-70">Uploaded {formatDate(item.created_at)}</small>
+        </div>
+      ) : item.caption ? (
+        <div className="viewer-caption">
+          {item.caption}
+          <small>{formatDate(item.created_at)}</small>
+        </div>
+      ) : null}
+      {items.length > 1 && (
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="viewer-arrow viewer-prev"
+            aria-label="Previous memory"
+            onClick={() => move(-1)}
+          >
+            <ChevronLeft />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="viewer-arrow viewer-next"
+            aria-label="Next memory"
+            onClick={() => move(1)}
+          >
+            <ChevronRight />
+          </Button>
+        </>
+      )}
+    </div>
+  );
 }

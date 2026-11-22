@@ -1,4 +1,5 @@
 # Anniversary website
+
 - [x] Create a temporary test user and verify signed-in behavior
 - [x] Editorial login, secure membership and password recovery
 - [x] Protected home, anniversary clocks and three-item navigation

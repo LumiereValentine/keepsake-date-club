@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Outlet,
   Link,
@@ -7,14 +7,14 @@ import {
   HeadContent,
   Scripts,
   type ErrorComponentProps,
-} from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+} from '@tanstack/react-router';
+import { useEffect, type ReactNode } from 'react';
 
-import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-import { supabase } from "@/integrations/supabase/client";
-import { Toaster } from "@/components/ui/sonner";
-import { Button } from "@/components/ui/button";
+import appCss from '../styles.css?url';
+import { reportLovableError } from '../lib/lovable-error-reporting';
+import { supabase } from '@/integrations/supabase/client';
+import { Toaster } from '@/components/ui/sonner';
+import { Button } from '@/components/ui/button';
 
 function NotFoundComponent() {
   return (
@@ -42,7 +42,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportLovableError(error, { boundary: 'tanstack_root_error_component' });
   }, [error]);
 
   return (
@@ -82,22 +82,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // Each content route, / included, must still set its own head(). Never add og:image or
     // twitter:image here: every page without its own would inherit the root's preview image.
     meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Always, Us · Our private story" },
-      { name: "description", content: "A private home for our story, our memories, and our next chapter." },
-      { property: "og:title", content: "Always, Us · Our private story" },
-      { property: "og:description", content: "A private home for our story and memories." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { charSet: 'utf-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { title: 'Always, Us · Our private story' },
+      {
+        name: 'description',
+        content: 'A private home for our story, our memories, and our next chapter.',
+      },
+      { property: 'og:title', content: 'Always, Us · Our private story' },
+      { property: 'og:description', content: 'A private home for our story and memories.' },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary_large_image' },
     ],
     links: [
       {
-        rel: "stylesheet",
+        rel: 'stylesheet',
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600&display=swap" },
+      { rel: 'icon', href: '/favicon.ico', type: 'image/x-icon' },
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600&display=swap',
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -124,14 +130,16 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        window.sessionStorage.setItem("anniversary-recovery", "true");
-        window.dispatchEvent(new Event("anniversary-recovery"));
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        window.sessionStorage.setItem('anniversary-recovery', 'true');
+        window.dispatchEvent(new Event('anniversary-recovery'));
       }
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT' && event !== 'USER_UPDATED') return;
       void router.invalidate();
-      if (event !== "SIGNED_OUT") void queryClient.invalidateQueries();
+      if (event !== 'SIGNED_OUT') void queryClient.invalidateQueries();
     });
     return () => subscription.unsubscribe();
   }, [router, queryClient]);

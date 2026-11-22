@@ -1,21 +1,273 @@
-import {useEffect,useState} from 'react';
-import {createFileRoute,useBlocker} from '@tanstack/react-router';
-import {useSuspenseQuery,useQueryClient} from '@tanstack/react-query';
-import {ImagePlus,Pencil,Plus,Trash2,Check,Play,LoaderCircle} from 'lucide-react';
-import {toast} from 'sonner';
-import {Button} from '@/components/ui/button';
-import {Dialog,DialogContent,DialogTitle,DialogDescription,DialogFooter} from '@/components/ui/dialog';
-import {Shell} from '@/features/anniversary/Shell';
-import {pageHead} from '@/features/anniversary/content';
-import {membershipQuery,mediaQuery} from '@/features/anniversary/queries';
-import {MediaViewer} from '@/features/anniversary/MediaViewer';
-import {UploadDialog} from '@/features/anniversary/UploadDialog';
-import {supabase} from '@/integrations/supabase/client';
-export const Route=createFileRoute('/_authenticated/gallery')({head:()=>pageHead('Pictures & Videos','A private collection of our photographs, films, and favorite moments.'),loader:async({context})=>{await context.queryClient.ensureQueryData(membershipQuery);await context.queryClient.ensureQueryData(mediaQuery);},component:Gallery});
-function Gallery(){const {data:media}=useSuspenseQuery(mediaQuery);const query=useQueryClient();const [filter,setFilter]=useState('All');const [editing,setEditing]=useState(false);const [selection,setSelection]=useState(false);const [selected,setSelected]=useState<Set<string>>(new Set());const [upload,setUpload]=useState(false);const [uploadBusy,setUploadBusy]=useState(false);const [confirm,setConfirm]=useState(false);const [deleting,setDeleting]=useState(false);const [viewer,setViewer]=useState<string|null>(null);const shown=media.filter(m=>filter==='All'||(filter==='Photos'?m.media_type==='photo':m.media_type==='video'));
- useEffect(()=>{if(!uploadBusy)return;const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='Uploads may be interrupted. Completed memories are safe.';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[uploadBusy]);
- useBlocker({shouldBlockFn:()=>uploadBusy&&!window.confirm('Uploads are in progress. Leaving may interrupt unfinished files. Completed memories are safe. Leave anyway?')});
- function reset(){setSelection(false);setSelected(new Set());}function choose(id:string){setSelected(old=>{const next=new Set(old);if(next.has(id))next.delete(id);else next.add(id);return next;});}
- async function remove(){setDeleting(true);try{for(const item of media.filter(m=>selected.has(m.id))){const {error}=await supabase.storage.from(item.media_type==='photo'?'photos':'videos').remove([item.storage_path]);if(error)throw error;if(item.thumbnail_path){const {error}=await supabase.storage.from('thumbnails').remove([item.thumbnail_path]);if(error)throw error;}const {error:deleteError}=await supabase.from('media').delete().eq('id',item.id);if(deleteError)throw deleteError;}toast.success('Selected memories permanently deleted.');setConfirm(false);reset();}catch(error){toast.error(error instanceof Error?error.message:'Some memories could not be deleted. Retry the remaining selections.');}finally{await query.invalidateQueries({queryKey:['media']});setDeleting(false);}}
- return <Shell><main><header className="page-heading"><div className="eyebrow">Our collection of little forever moments</div><h1>Pictures &amp; Videos</h1><p>Some moments deserve more than a place in our hearts.</p></header><div className="gallery-wrap"><div className="gallery-toolbar"><div className="filter-tabs" role="tablist" aria-label="Memory type">{['All','Photos','Videos'].map(tab=><Button key={tab} variant="ghost" role="tab" aria-selected={filter===tab} data-active={filter===tab} onClick={()=>{setFilter(tab);setSelected(new Set());}}>{tab}</Button>)}</div><div className="flex flex-wrap gap-2">{!editing?<Button variant="outline" onClick={()=>setEditing(true)}><Pencil/>Edit</Button>:<>{!selection?<><Button variant="outline" onClick={()=>setUpload(true)}><Plus/>Add</Button><Button variant="outline" onClick={()=>setSelection(true)} disabled={!media.length}><Trash2/>Delete</Button></>:<><Button variant="destructive" disabled={!selected.size} onClick={()=>setConfirm(true)}><Trash2/>Delete Selected ({selected.size})</Button><Button variant="outline" onClick={reset}>Cancel</Button></>}<Button variant="ghost" onClick={()=>{reset();setEditing(false);}}><Check/>Done</Button></>}</div></div>{shown.length?<div className="gallery-masonry">{shown.map(item=><div className={`memory-tile ${selected.has(item.id)?'selected':''}`} key={item.id}><Button variant="ghost" aria-label={selection?`Select ${item.original_filename}`:`Open ${item.original_filename}`} onClick={()=>selection?choose(item.id):setViewer(item.id)}>{item.media_type==='video'&&!item.thumbnail_path?<video src={item.preview} preload="metadata"/>:<img src={item.preview} alt={item.caption||item.original_filename} loading="lazy"/>}</Button>{item.media_type==='video'&&<span className="play-marker"><Play size={20}/></span>}{selection&&<span className="selection-marker">{selected.has(item.id)&&<Check size={15}/>}</span>}</div>)}</div>:<div className="empty-gallery"><ImagePlus size={34} strokeWidth={1}/><h2>{media.length?'No memories here just yet.':'Every story starts with a moment.'}</h2><p>{media.length?`Our ${filter.toLowerCase()} will appear here.`:'Add our first photograph or video, and let this collection grow with us.'}</p><Button onClick={()=>setUpload(true)}><Plus/>Add a memory</Button></div>}</div></main>{upload&&<UploadDialog onClose={()=>setUpload(false)} onBusy={setUploadBusy}/>} {viewer&&<MediaViewer items={shown} id={viewer} onClose={()=>setViewer(null)} editing={editing}/>}<Dialog open={confirm} onOpenChange={open=>{if(!deleting)setConfirm(open);}}><DialogContent><DialogTitle className="font-serif text-3xl text-primary">Let these memories go?</DialogTitle><DialogDescription>{selected.size} selected {selected.size===1?'memory':'memories'} will be permanently deleted, including the original files. This cannot be undone.</DialogDescription><DialogFooter><Button variant="outline" disabled={deleting} onClick={()=>setConfirm(false)}>Keep memories</Button><Button variant="destructive" disabled={deleting} onClick={()=>void remove()}>{deleting?<LoaderCircle className="animate-spin"/>:<Trash2/>}Delete permanently</Button></DialogFooter></DialogContent></Dialog></Shell>;
+import { useEffect, useState } from 'react';
+import { createFileRoute, useBlocker } from '@tanstack/react-router';
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query';
+import { ImagePlus, Pencil, Plus, Trash2, Check, Play, LoaderCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Shell } from '@/features/anniversary/Shell';
+import { pageHead } from '@/features/anniversary/content';
+import { membershipQuery, mediaQuery } from '@/features/anniversary/queries';
+import { MediaViewer } from '@/features/anniversary/MediaViewer';
+import { UploadDialog } from '@/features/anniversary/UploadDialog';
+import { supabase } from '@/integrations/supabase/client';
+export const Route = createFileRoute('/_authenticated/gallery')({
+  head: () =>
+    pageHead(
+      'Pictures & Videos',
+      'A private collection of our photographs, films, and favorite moments.'
+    ),
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData(membershipQuery);
+    await context.queryClient.ensureQueryData(mediaQuery);
+  },
+  component: Gallery,
+});
+function Gallery() {
+  const { data: media } = useSuspenseQuery(mediaQuery);
+  const query = useQueryClient();
+  const [filter, setFilter] = useState('All');
+  const [editing, setEditing] = useState(false);
+  const [selection, setSelection] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [upload, setUpload] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [viewer, setViewer] = useState<string | null>(null);
+  const shown = media.filter(
+    (m) =>
+      filter === 'All' ||
+      (filter === 'Photos' ? m.media_type === 'photo' : m.media_type === 'video')
+  );
+  useEffect(() => {
+    if (!uploadBusy) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = 'Uploads may be interrupted. Completed memories are safe.';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [uploadBusy]);
+  useBlocker({
+    shouldBlockFn: () =>
+      uploadBusy &&
+      !window.confirm(
+        'Uploads are in progress. Leaving may interrupt unfinished files. Completed memories are safe. Leave anyway?'
+      ),
+  });
+  function reset() {
+    setSelection(false);
+    setSelected(new Set());
+  }
+  function choose(id: string) {
+    setSelected((old) => {
+      const next = new Set(old);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  async function remove() {
+    setDeleting(true);
+    try {
+      for (const item of media.filter((m) => selected.has(m.id))) {
+        const { error } = await supabase.storage
+          .from(item.media_type === 'photo' ? 'photos' : 'videos')
+          .remove([item.storage_path]);
+        if (error) throw error;
+        if (item.thumbnail_path) {
+          const { error } = await supabase.storage.from('thumbnails').remove([item.thumbnail_path]);
+          if (error) throw error;
+        }
+        const { error: deleteError } = await supabase.from('media').delete().eq('id', item.id);
+        if (deleteError) throw deleteError;
+      }
+      toast.success('Selected memories permanently deleted.');
+      setConfirm(false);
+      reset();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Some memories could not be deleted. Retry the remaining selections.'
+      );
+    } finally {
+      await query.invalidateQueries({ queryKey: ['media'] });
+      setDeleting(false);
+    }
+  }
+  return (
+    <Shell>
+      <main>
+        <header className="page-heading">
+          <div className="eyebrow">Our collection of little forever moments</div>
+          <h1>Pictures &amp; Videos</h1>
+          <p>Some moments deserve more than a place in our hearts.</p>
+        </header>
+        <div className="gallery-wrap">
+          <div className="gallery-toolbar">
+            <div className="filter-tabs" role="tablist" aria-label="Memory type">
+              {['All', 'Photos', 'Videos'].map((tab) => (
+                <Button
+                  key={tab}
+                  variant="ghost"
+                  role="tab"
+                  aria-selected={filter === tab}
+                  data-active={filter === tab}
+                  onClick={() => {
+                    setFilter(tab);
+                    setSelected(new Set());
+                  }}
+                >
+                  {tab}
+                </Button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {!editing ? (
+                <Button variant="outline" onClick={() => setEditing(true)}>
+                  <Pencil />
+                  Edit
+                </Button>
+              ) : (
+                <>
+                  {!selection ? (
+                    <>
+                      <Button variant="outline" onClick={() => setUpload(true)}>
+                        <Plus />
+                        Add
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setSelection(true)}
+                        disabled={!media.length}
+                      >
+                        <Trash2 />
+                        Delete
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="destructive"
+                        disabled={!selected.size}
+                        onClick={() => setConfirm(true)}
+                      >
+                        <Trash2 />
+                        Delete Selected ({selected.size})
+                      </Button>
+                      <Button variant="outline" onClick={reset}>
+                        Cancel
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      reset();
+                      setEditing(false);
+                    }}
+                  >
+                    <Check />
+                    Done
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+          {shown.length ? (
+            <div className="gallery-masonry">
+              {shown.map((item) => (
+                <div
+                  className={`memory-tile ${selected.has(item.id) ? 'selected' : ''}`}
+                  key={item.id}
+                >
+                  <Button
+                    variant="ghost"
+                    aria-label={
+                      selection
+                        ? `Select ${item.original_filename}`
+                        : `Open ${item.original_filename}`
+                    }
+                    onClick={() => (selection ? choose(item.id) : setViewer(item.id))}
+                  >
+                    {item.media_type === 'video' && !item.thumbnail_path ? (
+                      <video src={item.preview} preload="metadata" />
+                    ) : (
+                      <img
+                        src={item.preview}
+                        alt={item.caption || item.original_filename}
+                        loading="lazy"
+                      />
+                    )}
+                  </Button>
+                  {item.media_type === 'video' && (
+                    <span className="play-marker">
+                      <Play size={20} />
+                    </span>
+                  )}
+                  {selection && (
+                    <span className="selection-marker">
+                      {selected.has(item.id) && <Check size={15} />}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-gallery">
+              <ImagePlus size={34} strokeWidth={1} />
+              <h2>
+                {media.length ? 'No memories here just yet.' : 'Every story starts with a moment.'}
+              </h2>
+              <p>
+                {media.length
+                  ? `Our ${filter.toLowerCase()} will appear here.`
+                  : 'Add our first photograph or video, and let this collection grow with us.'}
+              </p>
+              <Button onClick={() => setUpload(true)}>
+                <Plus />
+                Add a memory
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
+      {upload && <UploadDialog onClose={() => setUpload(false)} onBusy={setUploadBusy} />}{' '}
+      {viewer && (
+        <MediaViewer items={shown} id={viewer} onClose={() => setViewer(null)} editing={editing} />
+      )}
+      <Dialog
+        open={confirm}
+        onOpenChange={(open) => {
+          if (!deleting) setConfirm(open);
+        }}
+      >
+        <DialogContent>
+          <DialogTitle className="font-serif text-3xl text-primary">
+            Let these memories go?
+          </DialogTitle>
+          <DialogDescription>
+            {selected.size} selected {selected.size === 1 ? 'memory' : 'memories'} will be
+            permanently deleted, including the original files. This cannot be undone.
+          </DialogDescription>
+          <DialogFooter>
+            <Button variant="outline" disabled={deleting} onClick={() => setConfirm(false)}>
+              Keep memories
+            </Button>
+            <Button variant="destructive" disabled={deleting} onClick={() => void remove()}>
+              {deleting ? <LoaderCircle className="animate-spin" /> : <Trash2 />}Delete permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Shell>
+  );
 }

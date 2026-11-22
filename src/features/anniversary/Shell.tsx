@@ -1,8 +1,87 @@
-import {useState,useEffect,type ReactNode} from 'react';
-import {Link,useLocation,useNavigate} from '@tanstack/react-router';
-import {useQueryClient} from '@tanstack/react-query';
-import {LogOut,Menu,X} from 'lucide-react';
-import {Button} from '@/components/ui/button';
-import {supabase} from '@/integrations/supabase/client';
-import {content} from './content';
-export function Shell({children}:{children:ReactNode}){const location=useLocation();const navigate=useNavigate();const query=useQueryClient();const [scrolled,setScrolled]=useState(false);const [open,setOpen]=useState(false);useEffect(()=>{const change=()=>setScrolled(window.scrollY>30);change();window.addEventListener('scroll',change,{passive:true});return()=>window.removeEventListener('scroll',change);},[]);useEffect(()=>setOpen(false),[location.pathname]);async function logout(){await query.cancelQueries();query.clear();await supabase.auth.signOut();await navigate({to:'/auth',replace:true});}return <><header className={`site-nav ${location.pathname==='/home'&&!scrolled?'hero-nav':''}`}><Link to="/home" className="wordmark">Always, Us.</Link><nav className={`nav-items ${open?'open':''}`} aria-label="Main navigation"><Link to="/home" activeProps={{className:'active'}} onClick={()=>{if(location.pathname==='/home')window.scrollTo({top:0,behavior:'smooth'});}}>Home</Link><Link to="/gallery" activeProps={{className:'active'}}>Pictures &amp; Videos</Link><Link to="/date" activeProps={{className:'active'}}>Set Up Date</Link></nav><div className="nav-right"><span>Since 24.03.2020</span><Button variant="ghost" size="icon" aria-label="Sign out" title="Sign out" onClick={()=>void logout()}><LogOut/></Button><Button variant="ghost" size="icon" className="mobile-menu" aria-label={open?'Close menu':'Open menu'} onClick={()=>setOpen(v=>!v)}>{open?<X/>:<Menu/>}</Button></div></header><div className="page-reveal" key={location.pathname}>{children}</div><footer className="site-footer"><div className="monogram">{content.monogram}</div><p>24.03.2020<br/>{content.closing}</p></footer></>;}
+import { useState, useEffect, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { LogOut, Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { content } from './content';
+export function Shell({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const query = useQueryClient();
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const change = () => setScrolled(window.scrollY > 30);
+    change();
+    window.addEventListener('scroll', change, { passive: true });
+    return () => window.removeEventListener('scroll', change);
+  }, []);
+  useEffect(() => setOpen(false), [location.pathname]);
+  async function logout() {
+    await query.cancelQueries();
+    query.clear();
+    await supabase.auth.signOut();
+    await navigate({ to: '/auth', replace: true });
+  }
+  return (
+    <>
+      <header
+        className={`site-nav ${location.pathname === '/home' && !scrolled ? 'hero-nav' : ''}`}
+      >
+        <Link to="/home" className="wordmark">
+          Always, Us.
+        </Link>
+        <nav className={`nav-items ${open ? 'open' : ''}`} aria-label="Main navigation">
+          <Link
+            to="/home"
+            activeProps={{ className: 'active' }}
+            onClick={() => {
+              if (location.pathname === '/home') window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
+            Home
+          </Link>
+          <Link to="/gallery" activeProps={{ className: 'active' }}>
+            Pictures &amp; Videos
+          </Link>
+          <Link to="/date" activeProps={{ className: 'active' }}>
+            Set Up Date
+          </Link>
+        </nav>
+        <div className="nav-right">
+          <span>Since 24.03.2020</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Sign out"
+            title="Sign out"
+            onClick={() => void logout()}
+          >
+            <LogOut />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="mobile-menu"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X /> : <Menu />}
+          </Button>
+        </div>
+      </header>
+      <div className="page-reveal" key={location.pathname}>
+        {children}
+      </div>
+      <footer className="site-footer">
+        <div className="monogram">{content.monogram}</div>
+        <p>
+          24.03.2020
+          <br />
+          {content.closing}
+        </p>
+      </footer>
+    </>
+  );
+}
