@@ -29,7 +29,7 @@ function Home() {
     <Shell>
       <main>
         <section className="home-hero">
-          <img src={content.photo} alt="A quiet moment together beside the sea" />
+          <img src={content.countdownPhoto} alt="A quiet moment together beside the sea" />
           <div>
             <div className="eyebrow">You &amp; me · Since 2020</div>
             <h1>{content.heading}</h1>
@@ -58,7 +58,7 @@ function Home() {
         <section className="section-inner story-layout">
           <img
             className="story-photo"
-            src={content.photo}
+            src={content.ourStoryPhoto}
             alt="Together, overlooking the coastline"
             loading="lazy"
           />

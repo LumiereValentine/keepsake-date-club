@@ -7,6 +7,8 @@ export const content = {
   monogram: 'G & N',
   coupleNames: 'You & Me',
   loginPhoto: '/images/Login.jpg',
+  countdownPhoto: '/images/Countdown.jpg',
+  ourStoryPhoto: '/images/OurStory.jpg',
   photo: '/__l5e/assets-v1/b3fd1331-c4bd-433e-99ae-a702336c2ffe/anniversary-couple.jpg',
   heading: 'Every day. Every version. Always, us.',
   story:

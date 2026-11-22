@@ -94,7 +94,7 @@ export function Login({ recovery = false }: { recovery?: boolean }) {
         <div className="photo-copy">
           <div className="eyebrow">A love worth keeping</div>
           <h2>
-            Seven years.
+            Six years.
             <br />A lifetime to go.
           </h2>
           <div className="photo-line" />
